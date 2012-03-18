@@ -9,6 +9,9 @@
 #include <fstream>
 #include <utility> //std::pair, krawedzie w Graph
 
+#include <cstdlib>
+#include <time.h>
+
 #include <windows.h>
 
 using namespace std;
@@ -69,9 +72,14 @@ bool compareEdges(const EDGE& e1, const EDGE& e2)
 
 Graph MST(Graph& G)//minimal spanning tree
 {
+	if(G.polaczenia.size()<1)
+	{
+		MessageBoxA(0,"","graph must have positive number of verticles",0);
+		return Graph();
+	}
 	std::vector<int> MDR; //wierzcholki juz dodane
 	std::vector<EDGE> edgesHeap;
-	static Graph mst;
+	Graph mst;
 	MDR.resize(G.polaczenia.size());
 	mst.polaczenia.resize(G.polaczenia.size());
 
@@ -123,9 +131,50 @@ s = (czas / 1000) - (60 * m); // reszta z dzielenia ilosci sekund przez 60 daje 
 	return ss.str();
 }
 
-int main(int argc, const char *argv[])
+void testGraph(Graph& G)
+{
+	stringstream ss;
+	ss<<((int)G.polaczenia.size())<<".txt";
+	std::cout<<ss.str();
+	string output=ss.str();
+	int tstart=GetTickCount();
+	Graph res=MST(G);
+	//cout<<((std::string)res);
+	//cout<<czasWykonania(tstart)<<endl;
+	std::fstream err ("wyniki.txt", fstream::in | fstream::out| fstream::app);
+	err<<output<<"\t"<<(GetTickCount()-tstart)<<"\n";
+	err.close();
+}
+
+Graph genFullGraph(int N)
 {
 	Graph G;
+	G.polaczenia.resize(N);
+	srand(time(NULL));
+	for(int x=0; x<N; ++x)
+	for(int y=0; y<N; ++y)
+	{
+		if (x<=y)
+			continue;
+		G.connectNodes(x,y, rand()%100);
+	}
+	return G;
+}
+
+int main(int argc, const char *argv[])
+{
+	int N=10;
+	Graph G;
+	if(argc>1)
+		N=atoi(argv[1]);
+	for(int i=3000; i<4000; i+=100)
+	{
+		G=genFullGraph(i);
+	//	std::cout<<(string)G;
+		testGraph(G);
+	}
+
+	return 0;
 	//Vertex v;
 	//std::cout<<v;
 
@@ -142,8 +191,8 @@ int main(int argc, const char *argv[])
 		std::fstream in (input.c_str(), fstream::in | fstream::out);
 	//	std::fstream out (output.c_str(), fstream::in | fstream::out);
 		std::fstream err ("wyniki.txt", fstream::in | fstream::out| fstream::app);
-
-	int N,x,y,w,M;
+	//int N;
+	int x,y,w,M;
 	in>>N>>M; //N liczba wierzcholkow, M liczba polaczen
 	//cout<<"wczytano graf o "<<M<<" krawedziach\n";
 	for(int i=0; i<M; ++i)
