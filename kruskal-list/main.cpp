@@ -146,7 +146,55 @@ Graph Kruskal(Graph& G)//minimal spanning tree
 
 	std::vector<EDGE> edgesHeap(G.edgesHeap);
 
-	Graph Kruskal(G);
+	Graph Kruskal(G.polaczenia.size());
+
+	LAS L;
+	//std::vector<DRZEWO&> wKtorymDrzewieWierzcholek;
+
+	for(int i=0; i<G.polaczenia.size(); i++)
+		{
+			DRZEWO w;
+			w.insert(i);
+			L.insert(w);
+			//wKtorymDrzewieWierzcholek.push_back(&w);
+		}
+
+	make_heap(edgesHeap.begin(), edgesHeap.end(), compareEdges);
+
+	do
+	{
+		if(edgesHeap.empty()) break;
+		EDGE nearest=*edgesHeap.begin();
+		DRZEWO firstTree,secondTree;
+		for(LAS::iterator it= L.begin(); it!=L.end(); it++)
+			{
+				DRZEWO d=*it;
+				if(d.find(nearest.first.first)!=d.end())
+					firstTree=*it;
+			}
+		for(LAS::iterator it= L.begin(); it!=L.end(); it++)
+			{
+				DRZEWO d=*it;
+				if(d.find(nearest.first.second)!=d.end())
+					secondTree=*it;
+			}
+		if(firstTree!=secondTree) //jesli laczy dwa rozne drzewa
+			{
+				DRZEWO &f=firstTree;
+				DRZEWO &s=secondTree;
+				f.insert(s.begin(), s.end());
+				for(LAS::iterator it=L.begin(); it!=L.end(); it++)
+					if(*it==s)
+					{
+						L.erase(it);
+						break;
+					}
+				Kruskal.connectNodes(nearest.first.first, nearest.first.second, nearest.second);
+			}
+		pop_heap(edgesHeap.begin(), edgesHeap.end(), compareEdges);
+		edgesHeap.pop_back();
+	}
+	while (edgesHeap.size()!=0);
 
 	return Kruskal;
 }
@@ -169,29 +217,29 @@ void testGraph(Graph& G)
 
 int main(int argc, const char *argv[])
 {
-	if(false)
+	if(true)
 	{
 		int N=10;
 		Graph G(N);
 		if(argc>1)
 			N=atoi(argv[1]);
-		for(int i=3000; i<4000; i+=100)
+		for(int i=100; i<4000; i+=100)
 		{
 			G=genFullGraph(i);
 		//	std::cout<<(string)G;
 			testGraph(G);
 		}
+		return 0;
 	}
 
-
-	std::fstream in ("graph.txt", fstream::in | fstream::out);
+	std::fstream in ("..\\graph.txt", fstream::in | fstream::out);
 
 	int N, M;
 	in>>N>>M;
-	cout<<N<<" "<<M<<endl;
+	//cout<<N<<" "<<M<<endl;
 	Graph G(N);
 	G.polaczenia.resize(N);
 	in>>G;
-	cout<<G;
+	cout<<Kruskal(G);
 	in.close();
 }

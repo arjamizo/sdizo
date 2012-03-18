@@ -46,6 +46,11 @@ class Graph
 	//std::vector<Vertex > nodes;
 	std::vector< list<EDGE> > polaczenia; //tablica list par opisujacych polaczenie [para polaczonych wierzcholkow, wag]
 
+	Graph (int N)
+	{
+		polaczenia.resize(N);
+		//edgesHeap;
+	}
 
 	void connectNodes(int from, int to, int weight)
 	{
@@ -75,31 +80,33 @@ Graph MST(Graph& G)//minimal spanning tree
 	if(G.polaczenia.size()<1)
 	{
 		MessageBoxA(0,"","graph must have positive number of verticles",0);
-		return Graph();
+		return Graph(0);
 	}
 	std::vector<int> MDR; //wierzcholki juz dodane
 	std::vector<EDGE> edgesHeap;
-	Graph mst;
+	Graph mst(G.polaczenia.size());
 	MDR.resize(G.polaczenia.size());
-	mst.polaczenia.resize(G.polaczenia.size());
-
+	bool doit=false;
 	int i=0;
 	do
 	{
-		MDR[i]=true;	//wybieramy poczatkowy wierzcholek
+		doit=false;
 		//krawedzie wychodzace z i-tego wierzcholka wrzucamy na stos
 
 		//dodawanie krawedzi nowego wierzcholka do kopca krawedzi
 		for(std::list<EDGE>::iterator it=G.polaczenia[i].begin(); it!=G.polaczenia[i].end(); it++)
 		{
-			if(MDR[it->first.second])
+			EDGE p=*it;
+			if(MDR[p.first.first])
 				continue; //zabezpieczenie przed cyklicznoscia
-			edgesHeap.push_back(*it);
+			edgesHeap.push_back(p);
 			push_heap(edgesHeap.begin(), edgesHeap.end(), compareEdges);
 		}
+		MDR[i]=true;	//wybieramy poczatkowy wierzcholek
 
 		EDGE nearest;
 		again:
+		doit=true;
 		if(edgesHeap.empty()) break;
 		nearest=*edgesHeap.begin();
 		//std::cout<<((std::string)mst);
@@ -112,7 +119,7 @@ Graph MST(Graph& G)//minimal spanning tree
 
 		i=nearest.first.second;
 	}
-	while (edgesHeap.size()!=0);
+	while (edgesHeap.size()!=0 || doit);
 
 	return mst;
 }
@@ -148,8 +155,7 @@ void testGraph(Graph& G)
 
 Graph genFullGraph(int N)
 {
-	Graph G;
-	G.polaczenia.resize(N);
+	Graph G(N);
 	srand(time(NULL));
 	for(int x=0; x<N; ++x)
 	for(int y=0; y<N; ++y)
@@ -163,22 +169,25 @@ Graph genFullGraph(int N)
 
 int main(int argc, const char *argv[])
 {
-	int N=10;
-	Graph G;
-	if(argc>1)
-		N=atoi(argv[1]);
-	for(int i=3000; i<4000; i+=100)
+	if(true)
 	{
-		G=genFullGraph(i);
-	//	std::cout<<(string)G;
-		testGraph(G);
-	}
+		int N=10;
+		Graph G(N);
+		if(argc>1)
+			N=atoi(argv[1]);
+		for(int i=100; i<4000; i+=100)
+		{
+			G=genFullGraph(i);
+		//	std::cout<<(string)G;
+			testGraph(G);
+		}
 
-	return 0;
+		return 0;
+	}
 	//Vertex v;
 	//std::cout<<v;
 
-	string input="0999F.txt";
+	string input="..\\graph.txt";
 	//string output="";
 	//std::cout<<"argc="<<argc<<endl;
 	if(argc>1)
@@ -191,10 +200,11 @@ int main(int argc, const char *argv[])
 		std::fstream in (input.c_str(), fstream::in | fstream::out);
 	//	std::fstream out (output.c_str(), fstream::in | fstream::out);
 		std::fstream err ("wyniki.txt", fstream::in | fstream::out| fstream::app);
-	//int N;
+	int N;
 	int x,y,w,M;
 	in>>N>>M; //N liczba wierzcholkow, M liczba polaczen
 	//cout<<"wczytano graf o "<<M<<" krawedziach\n";
+	Graph G(N);
 	for(int i=0; i<M; ++i)
 	{
 		in>>x;
