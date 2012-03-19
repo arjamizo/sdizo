@@ -181,7 +181,6 @@ int main(int argc, const char *argv[])
 		//	std::cout<<(string)G;
 			testGraph(G);
 		}
-
 		return 0;
 	}
 	//Vertex v;
