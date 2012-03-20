@@ -148,7 +148,7 @@ void testGraph(Graph& G)
 	Graph res=MST(G);
 	//cout<<((std::string)res);
 	//cout<<czasWykonania(tstart)<<endl;
-	std::fstream err ("wyniki.txt", fstream::in | fstream::out| fstream::app);
+	std::fstream err ("..\\wyniki_prima.txt", fstream::in | fstream::out| fstream::app);
 	err<<output<<"\t"<<(GetTickCount()-tstart)<<"\n";
 	err.close();
 }
@@ -169,7 +169,7 @@ Graph genFullGraph(int N)
 
 int main(int argc, const char *argv[])
 {
-	if(true)
+	if(1)
 	{
 		int N=10;
 		Graph G(N);

@@ -33,7 +33,7 @@ OutputIterator copy_if(InputIterator first, InputIterator last,
 
 using namespace std;
 
-typedef unsigned long int uint;
+typedef unsigned long long uint;
 typedef pair<uint, uint> PAIRINT;
 typedef pair<PAIRINT, uint> EDGE;
 
@@ -176,67 +176,85 @@ struct AddNeighbours
     AddNeighbours(vector<int> &Q, vector<int> &d, CompareVerticles compare, vector<int> &p):compareVerticles(compare),Q(Q),d(d),p(p) {};
     void operator()(EDGE &a)
     {
-		int fromVert=a.first.first;
-		int toVert=a.first.second;
-		int newPathLength=d[fromVert]+a.second;
-		if(d[toVert]>newPathLength)
-		{
-			d[toVert]=newPathLength;
-			Q.push_back(toVert);
-			push_heap(Q.begin(), Q.end(), compareVerticles);
-		}
+        int fromVert=a.first.first;
+        int toVert=a.first.second;
+        int newPathLength=d[fromVert]+a.second;
+        if(d[toVert]>newPathLength)
+        {
+            d[toVert]=newPathLength;
+            Q.push_back(toVert);
+            push_heap(Q.begin(), Q.end(), compareVerticles);
+        }
     }
 };
 
-vector<int> Dij(Graph& G, int from)//minimal spanning tree
+#define INFTY 9999999
+struct Relaxation
 {
+    std::vector<uint> &d;
+    Relaxation(std::vector<uint> &d):d(d) {}
+    void operator()(const EDGE &e)
+    {
+        int from=e.first.first;
+        int to=e.first.second;
+        int cost=e.second;
+        if(d[from]<INFTY && d[to]>d[from]+cost) //relaxation is needed //DANGER: vulnerable to cycles.
+        {
+            d[to]=d[from]+cost;
+            //p[to]=from;
+        }
+    }
+};
+vector<uint> FB(Graph& G, int from)//minimal spanning tree
+{
+
+    //http://www.ibiblio.org/links/applets/appindex/graphtheory.html
     if(G.polaczenia.size()<1)
     {
         MessageBoxA(0,"","graph must have positive number of verticles",0);
-        return vector<int>(0);
+        return vector<uint>(0);
     }
-    Graph dij(G.polaczenia.size());
-    std::vector<int> Q; //heap
-    std::vector<int> p; //previouses
-    std::vector<int> d(G.polaczenia.size(),9999999); //distance
-    //std::vector<bool> was(G.polaczenia.size(), false);
-    //bool *was=new bool[G.polaczenia.size()];//were we in this verticle (this vector is used istead of infinity value in d)
-    //std::fill(was, was+G.polaczenia.size(), false);
+    std::vector<uint> d(G.polaczenia.size(), INFTY); //distance to infty (at least in 64-bit world ;) )
+    //std::copy(d.begin(), d.end(), std::ostream_iterator<uint>(std::cout, "\n"));
 
-    Q.push_back(from);
-    //was[from]=true;
+
+    Relaxation relaxIfNeeded(d);
     d[from]=0;
-    while(Q.size()!=0)
+
+    int N=G.polaczenia.size();
+	int cnt=0;
+    for(int u=0; u<N; u++) //for each verticle
     {
-        int u=Q.front();
-        CompareVerticles compareVerticles(d);
-        pop_heap(Q.begin(), Q.end(), compareVerticles);
-        Q.pop_back();
-        AddNeighbours addUNeighboursToQ(Q,d,compareVerticles,p);
-        if(0) for_each(G.polaczenia[u].begin(), G.polaczenia[u].end(), addUNeighboursToQ);
-        else for(list<EDGE>::iterator it=G.polaczenia[u].begin(); it!=G.polaczenia[u].end(); it++)
+		for(int i=0; i<N; i++) //for each verticle
+        if(1)	std::for_each(G.polaczenia[i].begin(), G.polaczenia[i].end(), relaxIfNeeded);
+        else
         {
-        	EDGE a=*it;
-			int fromVert=a.first.first;
-			int toVert=a.first.second;
-			int newPathLength=d[fromVert]+a.second;
-			if(d[toVert]>newPathLength)
-			{
-				d[toVert]=newPathLength;
-				Q.push_back(toVert);
-				push_heap(Q.begin(), Q.end(), compareVerticles);
-			}
-		}
+
+            for(list<EDGE>::iterator it=G.polaczenia[i].begin(); it!=G.polaczenia[i].end(); it++)
+                //relaxIfNeeded(*it);
+            {
+            	cnt++;
+                EDGE e=*it;
+                int from=e.first.first;
+                int to=e.first.second;
+                int cost=e.second;
+                if(d[to]>d[from]+cost) //relaxation is needed //DANGER: vulnerable to cycles.
+                {
+                    d[to]=d[from]+cost;
+                    //p[to]=from;
+                }
+            }
+        }
     }
     return d;
 }
 
-ostream &operator<<(ostream &cout, const vector<int> &c)
+template <class T> ostream &operator<<(ostream &cout, const vector<T> &c)
 {
-	for(int i=0; i<c.size(); ++i)
-		cout<<"["<<i<<"]="<<c[i]<<"  ";
-	cout<<endl;
-	return cout;
+    for(int i=0; i<c.size(); ++i)
+        cout<<"["<<i<<"]="<<c[i]<<"  ";
+    cout<<endl;
+    return cout;
 }
 
 void testGraph(Graph& G)
@@ -246,24 +264,24 @@ void testGraph(Graph& G)
     std::cout<<ss.str();
     string output=ss.str();
     int tstart=GetTickCount();
-    vector<int> res=Dij(G,0);
+    vector<uint> res=FB(G,0);
     //cout<<res;
     //cout<<((std::string)res);
     //cout<<czasWykonania(tstart)<<endl;
-    std::fstream err ("wyniki.txt", fstream::in | fstream::out| fstream::app);
+    std::fstream err ("..\\wyniki_bellman.txt", fstream::in | fstream::out| fstream::app);
     err<<output<<"\t"<<(GetTickCount()-tstart)<<"\n";
     err.close();
 }
 
 int main(int argc, const char *argv[])
 {
-    if(true)
+    if(1)
     {
         int N=10;
         Graph G(N);
         if(argc>1)
             N=atoi(argv[1]);
-        for(int i=100; i<4000; i+=100)
+        for(int i=100; true || i<4000; i+=100)
         {
             G=genFullGraph(i);
             //	std::cout<<(string)G;
@@ -280,6 +298,7 @@ int main(int argc, const char *argv[])
     Graph G(N);
     G.polaczenia.resize(N);
     in>>G;
-    cout<<Dij(G,0);
+    cout<<FB(G,0);
     in.close();
+    //system("PAUSE");
 }
