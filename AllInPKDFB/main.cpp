@@ -37,23 +37,38 @@ typedef unsigned long int uint;
 typedef pair<uint, uint> PAIRINT;
 typedef pair<PAIRINT, uint> EDGE;
 
+namespace std {
+ostream& operator<<(ostream& cout, const EDGE& e)
+{
+	int src=e.first.first;
+	int dest=e.first.second;
+	if(dest<src) swap(src,dest);
+    cout<<
+        //(::odd?"\t":"")<<
+        src<<" "<<dest<<" "<<e.second;
+    return cout;
+}
+}
+
 bool odd;
 
 class Graph
 {
 public:
-    //std::vector<Vertex > nodes;
-    std::vector< list<EDGE> > polaczenia; //tablica list par opisujacych polaczenie [para polaczonych wierzcholkow, wag]
 
     std::vector<EDGE> edgesHeap;
+    int M;
 
-    Graph (int N)
+
+	    //std::vector<Vertex > nodes;
+    std::vector< list<EDGE> > polaczenia; //tablica list par opisujacych polaczenie [para polaczonych wierzcholkow, wag]
+
+    Graph (int N, int M=0):M(M)
     {
         polaczenia.resize(N);
-        //edgesHeap;
     }
 
-    void connectNodes(uint from, uint to, uint weight)
+	void connectNodes(uint from, uint to, uint weight)
     {
         EDGE k(PAIRINT(from, to),weight);
         polaczenia[from].push_back(k);
@@ -62,14 +77,42 @@ public:
         polaczenia[from].push_back(EDGE(PAIRINT(from, to),weight));
     }
 
+    int getEdgesNumber() const
+    {
+    	return edgesHeap.size();
+    	int sum=0;
+    	for(int i=0; i<polaczenia.size(); ++i)
+    	{
+			for(std::list<EDGE >::const_iterator it=polaczenia[i].begin(); it!=polaczenia[i].end(); ++it)
+				//if(it->first.first<=it->first.second)
+					++sum;
+    	}
+		return sum;
+    }
+
     operator std::string() const
     {
         std::stringstream ss;
         //ss<<"|G|="<<polaczenia.size()<<"\n";
-        std::copy(edgesHeap.begin(), edgesHeap.end(), std::ostream_iterator< EDGE >(ss, "\n"));
+        string f;
+        int i;
+        int I=edgesHeap.size();
+        for(i=0; i<I; ++i)
+        {
+			ss<<edgesHeap[i]<<endl;
+			f=ss.str();
+        }
         ss<<"";
         return ss.str();
     }
+};
+
+class GraphList: public Graph
+{
+	    //std::vector<Vertex > nodes;
+
+    //iterates through all neighbours of u with function fnc
+    virtual void iterateThroughNeighbours(int u, void (*fnc)(EDGE &e))=0;
 };
 
 bool compareEdges(const EDGE& e1, const EDGE& e2)
@@ -81,13 +124,6 @@ bool compareEdges(const EDGE& e1, const EDGE& e2)
 
 namespace std
 {
-ostream& operator<<(ostream& cout, const EDGE& e)
-{
-    cout<<
-        //(::odd?"\t":"")<<
-        e.first.first<<" "<<e.first.second<<" "<<e.second;
-    return cout;
-}
 ostream& operator<<(ostream& cout, const list<EDGE>& es)
 {
     ::odd=!::odd;
@@ -104,49 +140,26 @@ ostream& operator<<(ostream& cout, const Graph& G)
 istream& operator>>(istream& cin, Graph& G)
 {
     int x,y,w;
-    for(int i=0; i<G.polaczenia.size(); ++i)
+    int i=0;
+    int I=G.M;
+    for(i=0; i<I; ++i)
     {
         cin>>x;
         cin>>y;
+        if(x>y)
+        {
+        	//std::cerr<<"error in input: first coordinate should be lower\n";
+        	swap(x,y);
+        }
         cin>>w;
         //cout<<"wczytano krawdz "<<x<<" to "<<y<<" for "<<w<<"\n";
-        if(G.polaczenia.capacity()<std::max(x,y)+1)
-            G.polaczenia.resize(std::max(x,y)+1);
+        //if(G.polaczenia.capacity()<std::max(x,y)+1)
+        //    G.polaczenia.resize(std::max(x,y)+1);
         G.connectNodes((uint)x,(uint)y,(uint)w);
     }
+    //G.M=i;
     return cin;
 }
-}
-
-
-Graph genFullGraph(int N)
-{
-    //G.polaczenia.resize(N);
-    Graph G(N);
-    srand(time(NULL));
-    for(int x=0; x<N; ++x)
-        for(int y=0; y<N; ++y)
-        {
-            if (x<=y)
-                continue;
-            G.connectNodes(x,y, rand()%100+1);
-        }
-    return G;
-}
-
-
-string czasWykonania(int tstart)
-{
-    int tend=GetTickCount();
-    int s,m,h,czas;
-    czas=tend-tstart;
-    s = czas / 1000; // reszta z dzielenia ilosci sekund przez 60 daje nam "koncowke"
-    m = (s / 60) % 60; // dzielimy przez 60, aby uzyskac ilosc minut, ale interesuje nas tylko reszta z dzielenia przez 60, aby przy czasie >1h nie otrzymac dziwnych wynikow
-    h = s / 3600; // dzielimy przez ilosc sekund w godzinie i mamy ilosc godzin
-    s = (czas / 1000) - (60 * m); // reszta z dzielenia ilosci sekund przez 60 daje nam "koncowke"
-    stringstream ss;
-    ss<<"czas wykonania"<< h << ":" << m << ":" << s<<"."<<(czas%1000);
-    return ss.str();
 }
 
 typedef std::set<uint> DRZEWO;
@@ -154,6 +167,13 @@ typedef std::set<DRZEWO> LAS;
 
 typedef pair<int, int> WierzchWaga;
 
+ostream &operator<<(ostream &cout, const vector<int> &c)
+{
+	for(int i=0; i<c.size(); ++i)
+		cout<<"["<<i<<"]="<<c[i]<<"  ";
+	cout<<endl;
+	return cout;
+}
 
 struct CompareVerticles
 {
@@ -183,91 +203,70 @@ struct AddNeighbours
 		{
 			d[toVert]=newPathLength;
 			Q.push_back(toVert);
+			#ifdef HEAP
 			push_heap(Q.begin(), Q.end(), compareVerticles);
+			#endif
 		}
     }
 };
 
-//const in Graph only for temporary argumenting
+	//#define HEAP
 vector<int> Dij(const Graph& G, int from)//minimal spanning tree
 {
-	#define HEAP
+	std::cout<<"dijkstra starts\n";
     if(G.polaczenia.size()<1)
     {
         MessageBoxA(0,"","graph must have positive number of verticles",0);
         return vector<int>(0);
     }
     Graph dij(G.polaczenia.size());
+    std::vector<int> p; //previouses
+    std::vector<int> d(G.polaczenia.size(),9999999);
     std::vector<int> Q; //heap
     Q.reserve(G.polaczenia.size());
-    std::vector<int> p; //previouses
     p.reserve(G.polaczenia.size());
-    std::vector<int> d(G.polaczenia.size(),9999999); //distance
-    //std::vector<bool> was(G.polaczenia.size(), false);
-    //bool *was=new bool[G.polaczenia.size()];//were we in this verticle (this vector is used istead of infinity value in d)
-    //std::fill(was, was+G.polaczenia.size(), false);
 
     Q.push_back(from);
     //was[from]=true;
     d[from]=0;
-	CompareVerticles compareVerticles(d);
-	AddNeighbours addUNeighboursToQ(Q,d,compareVerticles,p);
+	const CompareVerticles compareVerticles(d);
+	const AddNeighbours addUNeighboursToQ(Q,d,compareVerticles,p);
+	int u;
     while(Q.size()!=0)
     {
     	#ifdef HEAP
-        int u=Q.front();
+        u=Q.front();
         #elif defined PRIOQUE
         #else //simple vector
-        int u=std::min_element(Q.begin(), Q.end(), compareVerticles);
+        std::vector<int>::iterator minit=std::min_element(Q.begin(), Q.end(), compareVerticles);
+        u=*minit;
         #endif
         #ifdef HEAP
         pop_heap(Q.begin(), Q.end(), compareVerticles);
         Q.pop_back();
         #else //simple vector
-
+        std::swap(Q[minit-Q.begin()], Q.back());
+        Q.pop_back();
         #endif
         if(1) for_each(G.polaczenia[u].begin(), G.polaczenia[u].end(), addUNeighboursToQ);
-        else for(list<EDGE>::const_iterator it=G.polaczenia[u].begin(); it!=G.polaczenia[u].end(); it++)
-        {
-        	EDGE a=*it;
-			int fromVert=a.first.first;
-			int toVert=a.first.second;
-			int newPathLength=d[fromVert]+a.second;
-			if(d[toVert]>newPathLength)
+        else
+			for(list<EDGE>::const_iterator it=G.polaczenia[u].begin(); it!=G.polaczenia[u].end(); it++)
 			{
-				d[toVert]=newPathLength;
-				Q.push_back(toVert);
-				push_heap(Q.begin(), Q.end(), compareVerticles);
+				EDGE a=*it;
+				int fromVert=a.first.first;
+				int toVert=a.first.second;
+				int newPathLength=d[fromVert]+a.second;
+				if(d[toVert]>newPathLength)
+				{
+					d[toVert]=newPathLength;
+					Q.push_back(toVert);
+					push_heap(Q.begin(), Q.end(), compareVerticles);
+				}
 			}
-		}
     }
     return d;
-    #undef HEAP
 }
 
-ostream &operator<<(ostream &cout, const vector<int> &c)
-{
-	for(int i=0; i<c.size(); ++i)
-		cout<<"["<<i<<"]="<<c[i]<<"  ";
-	cout<<endl;
-	return cout;
-}
-
-void testGraph(const Graph& G, int edges=0)
-{
-    stringstream ss;
-    ss<<((uint)G.polaczenia.size())<<".txt";
-    std::cout<<ss.str();
-    string output=ss.str();
-    int tstart=GetTickCount();
-    vector<int> res=Dij(G,0);
-    //cout<<res;
-    //cout<<((std::string)res);
-    //cout<<czasWykonania(tstart)<<endl;
-    std::fstream err ("..\\wyniki_dijkstra.txt", fstream::in | fstream::out| fstream::app);
-    err<<G.polaczenia.size()<<"\t"<<edges<<"\t"<<(GetTickCount()-tstart)<<"\n";
-    err.close();
-}
 
 struct BelowFilter {
 	int lim;
@@ -286,38 +285,50 @@ struct EqualFilter {
 	}
 };
 
-Graph generateGraph(int v, int e, int weightMax=100, int weightMin=1)
+Graph generateGraph(int v, double fill, int weightMax=100, int weightMin=1)
 {
 	Graph G(v);
-	vector<int> a,b;
-	vector<int> cachedA(v, 0);
 	srand(time(0));
-	a.reserve(v);
-	b.reserve(v);
+	std::vector<pair<int,int> > omega;
+	std::vector<pair<int,int> > rest;
 	for(int i=0; i<v; ++i)
-	{
-		a.push_back(i);
-		b.push_back(i);
-	}
-	for(int i=0; i<e; ++i)
-	{
-		std::random_shuffle(a.begin(), a.end());
-		int src=a.back();
-		if(++cachedA[src]==v)
+		for(int j=i+1; j<v; ++j)
 		{
-			a.pop_back();
-			list<int> copyB(b.begin(), b.end());
-			EqualFilter equalFilter(src);
-			remove_if(copyB.begin(), copyB.end(), equalFilter);
-			b=std::vector<int>(copyB.begin(), copyB.end());
+			omega.push_back(make_pair(i,j));
 		}
-		vector<int> copyOfB(b);
-		BelowFilter belowFilter(src);
-		std::remove_if(copyOfB.begin(), copyOfB.end(), belowFilter);
-		std::random_shuffle(copyOfB.begin(), copyOfB.end());
-		int dest=copyOfB.front();
-		G.connectNodes(src,dest,rand()%(weightMax-weightMin)+weightMin);
+	std::vector<int> isIn(v,false);
+
+	std::random_shuffle(omega.begin(),omega.end());
+	int cnt=0;
+	int e=fill*omega.size();
+	for(int o=0; o<omega.size(); ++o)
+	{
+		if(isIn[omega[o].first]==false || isIn[omega[o].second]==false)
+		{
+			isIn[omega[o].first]=true;
+			isIn[omega[o].second]=true;
+			G.connectNodes(omega[o].first, omega[o].second, rand()%(weightMax-weightMin)+weightMin);
+			//swap(omega[o],omega[omega.size()-1]);
+			//omega.pop_back();
+			cnt++;
+		}
+		else
+		{
+			rest.push_back(omega[o]);
+		}
 	}
+	omega.clear();
+	omega=rest;
+
+	for(; cnt<e && omega.size(); cnt++)
+	{
+		pair<int, int> edge=omega.back();
+		omega.pop_back();
+		G.connectNodes(edge.first, edge.second, rand()%(weightMax-weightMin)+weightMin);
+	}
+	if(cnt<e)
+		std::cerr<<"not enough edges\n";
+
 	return G;
 }
 
@@ -330,84 +341,106 @@ string strjoin(const char *algos[], int tablen, const char *separator)
 	return algs_str;
 }
 
+Graph loadGraphFromFile(const char *fname)
+{
+		std::fstream in (fname, fstream::in | fstream::out);
+		if(!in.is_open())
+			{
+				std::cerr<<"file could not be found!\n";
+				return Graph(0);
+			}
+		int N, M;
+		in>>N>>M;
+		//cout<<N<<" "<<M<<endl;
+		Graph G(N,M);
+		G.polaczenia.resize(N);
+		in>>G;
+		in.close();
+		return G;
+}
+
+
+void saveResult(const char *algo_choice, const char *impl_choice, int V, int E, int ticks)
+{
+	std::fstream err("C:\\Documents and Settings\\epsilon\\Pulpit\\sdizo\\results.txt", std::fstream::out | std::fstream::app);
+	err<<algo_choice<<" "<<impl_choice<<" "<<V<<" "<<E<<" "<<ticks<<endl;
+	cout<<algo_choice<<" "<<impl_choice<<" "<<V<<" "<<E<<" "<<ticks<<"tcks="<<(ticks*1000/CLOCKS_PER_SEC)<<"ms"<<endl;
+	err.close();
+}
+void saveGraph(const Graph &G)
+{
+		std::fstream graphOutput("c:\\lastgraph.txt", std::fstream::out | std::fstream::trunc);
+		graphOutput<<G.polaczenia.size()<<" "<<G.getEdgesNumber()<<endl;
+		graphOutput<<G;
+		graphOutput.close();
+}
+
+void doAlgorithm(const char *algo, const Graph &G)
+{
+	if(strcmp(algo,"dijkstra")==0)
+	{
+		int start=GetTickCount();
+		vector<int> d=Dij(G,0);
+		//proceedAlgorithm("dijkstra","list",G);
+		int end=GetTickCount();
+		//cout<<d<<endl;
+		//cout<<G<<endl;
+		saveResult("dijkstra","list", G.polaczenia.size(), G.getEdgesNumber(), end-start);
+	}
+}
+
 int main(int argc, const char *argv[])
 {
-	if(1)
+	Graph G(0);
+
+	int V, maxWeight, minWeight;
+	float E;
+	const char *algo, *impl;
+	algo="dijkstra";
+	impl="list";
+	V=3000;
+	E=0.8;
+	maxWeight=100;
+	minWeight=1;
+	if(argc>=2) algo=argv[2-1];
+	if(argc>=3) impl=argv[3-1];
+	if(argc>=4)	V=atoi(argv[4-1]);
+	if(argc>=5)	E=atof(argv[5-1]);
+	if(argc>=6) maxWeight=atoi(argv[6-1]);
+	if(argc>=7) minWeight=atoi(argv[7-1]);
+
+	if(argc==2 && strcmp(argv[1],"repeat"))
+		{
+			G=loadGraphFromFile("c:\\lastgraph.txt");
+			int E=G.getEdgesNumber();
+			int V=G.polaczenia.size();
+			//cout<<Dij(G,0);
+			doAlgorithm("dijkstra",G);
+		}
+	else if(strcmp("dijkstra",algo)==0 && strcmp("list",impl)==0)
+	{
+		printf("interpreted arguments as %d %f %d %d\n", V, E, maxWeight, minWeight);
+
+		G=generateGraph(V,E);
+		doAlgorithm("dijkstra",G);
+		//saveGraph(G);
+		return 0;
+	}
+
+	else if(argc==2)
+	{
+		G=loadGraphFromFile(argv[1]);
+		doAlgorithm("dijkstra",G);
+	}
+	else
 	{
 		const char *algos[]={"dijkstra", "bellmanford", "kruskal", "prime"};
 		const char *implementations[]={"list", "matrix"};
-
-		int V=atoi("600");
-		int E=atoi("3600");
-		const char *algo_choice="dijkstra";
-		const char *impl_choice="list";
-
-		int maxWeight=atoi("100");
-		int minWeight=atoi("1");
-		if(argc<5)
-		{
-			printf("usage: prog [%s] [%s] number_of_verticles:int number_of_edges:int [maxWeight:int [minWeight:int]]"
-					, strjoin(algos, 4, "|").c_str()
-					, strjoin(implementations, 2, "|").c_str());
-			printf("running with default arguments %s %s %d %d\n\n", algo_choice, impl_choice, V, E);
-			if(argc>=6) maxWeight=atoi(argv[6-1]);
-			if(argc>=7) minWeight=atoi(argv[7-1]);
-		}
-		else
-		{
-			V=atoi(argv[3]);
-			E=atoi(argv[4]);
-			algo_choice=argv[1];
-			impl_choice=argv[2];
-		}
-		int start, end;
-		Graph G(generateGraph(V,E,maxWeight, minWeight));
-		cout<<"Graph has been generated\n";
-		if(strcmp(algo_choice,algos[0])==0)
-			{
-				start=GetTickCount();
-				Dij(G, 0);
-				end=GetTickCount();
-			}
-		else
-		{
-			goto deadbeef;
-		}
-		{
-			int ticks=end-start;
-			std::cout<<algo_choice<<" "<<impl_choice<<" "<<V<<" "<<E<<" "<<ticks<<endl;
-			std::fstream err("results.txt", std::fstream::out | std::fstream::app);
-			err<<algo_choice<<" "<<impl_choice<<" "<<V<<" "<<E<<" "<<ticks<<endl;
-			err.close();
-		}
-		return 0;
-		deadbeef:
-		printf("not supported yet.\n0xDEADBEEF");
+		printf("usage: prog [%s] [%s] number_of_verticles:int number_of_edges:int [maxWeight:int [minWeight:int]]"
+				, strjoin(algos, 4, "|").c_str()
+				, strjoin(implementations, 2, "|").c_str());
+		printf("egg: %s %s %d %d\n\n", algos[0], implementations[0], 60, 3555);
+		return 1;
 	}
-    else if(1)
-    {
-        int N=10;
-        Graph G(N);
-        if(argc>1)
-            N=atoi(argv[1]);
-        for(int i=100; true || i<4000; i+=100)
-        {
-            G=genFullGraph(i);
-            //	std::cout<<(string)G;
-            testGraph(generateGraph(i, i/4*i));
-        }
-        return 0;
-    }
-
-    std::fstream in ("..\\graph.txt", fstream::in | fstream::out);
-
-    int N, M;
-    in>>N>>M;
-    //cout<<N<<" "<<M<<endl;
-    Graph G(N);
-    G.polaczenia.resize(N);
-    in>>G;
-    cout<<Dij(G,0);
-    in.close();
-    system("PAUSE");
+	return 0;
 }
