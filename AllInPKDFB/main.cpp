@@ -16,22 +16,6 @@
 
 #include <windows.h>
 
-
-template <class InputIterator, class OutputIterator, class Predicate>
-OutputIterator copy_if(InputIterator first, InputIterator last,
-                       OutputIterator result, Predicate pred)
-{
-    while(first!=last)
-    {
-        if(pred(*first))
-            *result++ = *first;
-        ++first;
-    }
-    return result;
-};
-
-
-
 using namespace std;
 
 typedef unsigned long int uint;
@@ -40,21 +24,21 @@ typedef pair<PAIRINT, uint> EDGE;
 
 namespace std
 {
-	ostream& operator<<(ostream& cout, const EDGE& e)
-	{
-		int src=e.first.first;
-		int dest=e.first.second;
-		if(dest<src) swap(src,dest);
-		cout<<
-			//(::odd?"\t":"")<<
-			src<<" "<<dest<<" "<<e.second;
-		return cout;
-	}
+ostream& operator<<(ostream& cout, const EDGE& e)
+{
+    int src=e.first.first;
+    int dest=e.first.second;
+    if(dest<src) swap(src,dest);
+    cout<<
+        //(::odd?"\t":"")<<
+        src<<" "<<dest<<" "<<e.second;
+    return cout;
+}
 }
 
 struct unary_f
 {
-	virtual bool operator()(const EDGE&) =0;
+    virtual bool operator()(const EDGE&) =0;
 };
 
 class Graph
@@ -99,7 +83,7 @@ public:
     virtual void setNumberOfVerticles(int v)=0;
     virtual int getNumberOfVerticles() const=0;
     virtual void clearEdgesList()=0;
-	virtual void iterateThroughNeighbours(int &u, unary_f &fnc) const=0;
+    virtual void iterateThroughNeighbours(int &u, unary_f &fnc) const=0;
 
 
     virtual operator std::string() const=0;
@@ -131,17 +115,16 @@ public:
             }
         std::vector<int> isIn(v,false);
 
-        Graph &ths=*this;
         std::random_shuffle(omega.begin(),omega.end());
         int cnt=0;
         int e=fill*omega.size();
-        for(int o=0; o<omega.size(); ++o)
+        for(size_t o=0; o<omega.size(); ++o)
         {
             if(isIn[omega[o].first]==false || isIn[omega[o].second]==false)
             {
                 isIn[omega[o].first]=true;
                 isIn[omega[o].second]=true;
-				connectNodes(omega[o].first, omega[o].second, rand()%(weightMax-weightMin)+weightMin);
+                connectNodes(omega[o].first, omega[o].second, rand()%(weightMax-weightMin)+weightMin);
                 cnt++;
             }
             else
@@ -160,9 +143,6 @@ public:
         }
         if(cnt<e)
             std::cerr<<"not enough edges\n";
-		int number=getEdgesNumber();
-		cnt=cnt;
-		//std::cout<<*this;
     }
 };
 
@@ -254,8 +234,8 @@ public:
         polaczenia.resize(v);
         for(int i=0; i<v; ++i)
         {
-			polaczenia[i].resize(v);
-			std::fill(polaczenia[i].begin(),polaczenia[i].end(),0);
+            polaczenia[i].resize(v);
+            std::fill(polaczenia[i].begin(),polaczenia[i].end(),0);
         }
     }
     virtual int getNumberOfVerticles() const
@@ -264,7 +244,6 @@ public:
     }
     virtual void clearEdgesList()
     {
-        int v=getEdgesNumber();
         edgesHeap.clear();
         polaczenia.clear();
     };
@@ -277,13 +256,13 @@ public:
     //template <class UnaryFunction>
     void iterateThroughNeighbours(int &u, unary_f &fnc) const
     {
-    	int n=getNumberOfVerticles();
+        int n=getNumberOfVerticles();
         for(int i=0; i<n; ++i)
-        if(polaczenia[u][i]!=0)
-        {
-        	EDGE a(PAIRINT(u,i),polaczenia[u][i]);
-            fnc(a);
-        }
+            if(polaczenia[u][i]!=0)
+            {
+                EDGE a(PAIRINT(u,i),polaczenia[u][i]);
+                fnc(a);
+            }
     };
     operator std::string() const
     {
@@ -332,7 +311,7 @@ typedef pair<int, int> WierzchWaga;
 
 ostream &operator<<(ostream &cout, const vector<int> &c)
 {
-    for(int i=0; i<c.size(); ++i)
+    for(size_t i=0; i<c.size(); ++i)
         cout<<"["<<i<<"]="<<c[i]<<"  ";
     cout<<endl;
     return cout;
@@ -342,7 +321,8 @@ ostream &operator<<(ostream &cout, const vector<int> &c)
 ////////////////////////////////
 //   DIJKSTRA START
 ////////////////////////////////
-
+//define preprocessor variable HEAP to use heap instead of simple vector
+//#define HEAP
 
 struct CompareVerticles
 {
@@ -377,11 +357,11 @@ struct AddNeighbours: public unary_f
             push_heap(Q.begin(), Q.end(), compareVerticles);
 #endif
         }
+        return true;
     }
 };
 
 
-//#define HEAP
 vector<int> Dij(const Graph& G, int from)//minimal spanning tree
 {
     std::cout<<"dijkstra starts\n";
@@ -419,7 +399,7 @@ vector<int> Dij(const Graph& G, int from)//minimal spanning tree
         std::swap(Q[minit-Q.begin()], Q.back());
         Q.pop_back();
 #endif
-       G.iterateThroughNeighbours(u,addUNeighboursToQ);
+        G.iterateThroughNeighbours(u,addUNeighboursToQ);
     }
     return d;
 }
@@ -506,12 +486,11 @@ vector<uint> FB(Graph& G, int from)//minimal spanning tree
     Relaxation relaxIfNeeded(d);
     d[from]=0;
 
-	int cnt=0;
     for(int u=0; u<N; u++) //for each verticle
     {
-		for(int i=0; i<N; i++) //for each verticle
-        //if(1)	std::for_each(G.polaczenia[i].begin(), G.polaczenia[i].end(), relaxIfNeeded);
-        G.iterateThroughNeighbours(i, relaxIfNeeded);
+        for(int i=0; i<N; i++) //for each verticle
+            //if(1)	std::for_each(G.polaczenia[i].begin(), G.polaczenia[i].end(), relaxIfNeeded);
+            G.iterateThroughNeighbours(i, relaxIfNeeded);
     }
     return d;
 }
@@ -525,7 +504,7 @@ vector<uint> FB(Graph& G, int from)//minimal spanning tree
 ////////////////////////////////
 bool compareEdgesPrime(const EDGE& e1, const EDGE& e2)
 {
-	return e1.second>e2.second;
+    return e1.second>e2.second;
 }
 
 struct AddAllNeighboursToLocalEdgesHeap: public unary_f
@@ -535,63 +514,136 @@ struct AddAllNeighboursToLocalEdgesHeap: public unary_f
     AddAllNeighboursToLocalEdgesHeap(std::vector<int> &MDR, std::vector<EDGE> &edgesHeap):MDR(MDR),edgesHeap(edgesHeap) {}
     bool operator()(const EDGE &p)
     {
-			if(MDR[p.first.first])
-				return false; //zabezpieczenie przed cyklicznoscia
-			edgesHeap.push_back(p);
-			push_heap(edgesHeap.begin(), edgesHeap.end(), compareEdgesPrime);
-			return true;
+        if(MDR[p.first.first])
+            return false; //zabezpieczenie przed cyklicznoscia
+        edgesHeap.push_back(p);
+        push_heap(edgesHeap.begin(), edgesHeap.end(), compareEdgesPrime);
+        return true;
     }
 };
 
 Graph &Prime(const Graph& G, Graph &mst)//minimal spanning tree
 {
-	mst.clearEdgesList();
-	if(G.getEdgesNumber()<1)
-	{
-		MessageBoxA(0,"","graph must have positive number of verticles",0);
-		return mst;
-	}
-	mst.setNumberOfVerticles(G.getNumberOfVerticles());
-	std::vector<int> MDR; //wierzcholki juz dodane
-	std::vector<EDGE> edgesHeap;
-	MDR.resize(G.getNumberOfVerticles());
-	AddAllNeighboursToLocalEdgesHeap addAllNeighboursToLocalEdgesHeap(MDR,edgesHeap);
-	bool doit=false;
-	int i=0;
-	do
-	{
-		doit=false;
-		//krawedzie wychodzace z i-tego wierzcholka wrzucamy do Q (zbiornika krawedzi)
-		//dodawanie krawedzi nowego wierzcholka do kopca krawedzi
-		G.iterateThroughNeighbours(i,addAllNeighboursToLocalEdgesHeap);
-		MDR[i]=true;	//wybieramy poczatkowy wierzcholek
+    mst.clearEdgesList();
+    if(G.getEdgesNumber()<1)
+    {
+        MessageBoxA(0,"","graph must have positive number of verticles",0);
+        return mst;
+    }
+    mst.setNumberOfVerticles(G.getNumberOfVerticles());
+    std::vector<int> MDR; //wierzcholki juz dodane
+    std::vector<EDGE> edgesHeap;
+    MDR.resize(G.getNumberOfVerticles());
+    AddAllNeighboursToLocalEdgesHeap addAllNeighboursToLocalEdgesHeap(MDR,edgesHeap);
+    bool doit=false;
+    int i=0;
+    do
+    {
+        doit=false;
+        //krawedzie wychodzace z i-tego wierzcholka wrzucamy do Q (zbiornika krawedzi)
+        //dodawanie krawedzi nowego wierzcholka do kopca krawedzi
+        G.iterateThroughNeighbours(i,addAllNeighboursToLocalEdgesHeap);
+        MDR[i]=true;	//wybieramy poczatkowy wierzcholek
 
-		EDGE nearest;
-		again:
-		doit=true;
-		if(edgesHeap.empty()) break;
-		nearest=*edgesHeap.begin();
-		//std::cout<<((std::string)mst);
-		pop_heap(edgesHeap.begin(), edgesHeap.end(), compareEdges);
-		edgesHeap.pop_back();
-		if(MDR[nearest.first.second] && MDR[nearest.first.first])
-			goto again;
-		else
-			mst.connectNodes(nearest.first.first,nearest.first.second,nearest.second);
+        EDGE nearest;
+again:
+        doit=true;
+        if(edgesHeap.empty()) break;
+        nearest=*edgesHeap.begin();
+        //std::cout<<((std::string)mst);
+        pop_heap(edgesHeap.begin(), edgesHeap.end(), compareEdges);
+        edgesHeap.pop_back();
+        if(MDR[nearest.first.second] && MDR[nearest.first.first])
+            goto again;
+        else
+            mst.connectNodes(nearest.first.first,nearest.first.second,nearest.second);
 
-		i=nearest.first.second;
-	}
-	while (edgesHeap.size()!=0 || doit);
+        i=nearest.first.second;
+    }
+    while (edgesHeap.size()!=0 || doit);
 
-	return mst;
+    return mst;
 }
 ////////////////////////////////
 // MST PRIME END
 ////////////////////////////////
 
+////////////////////////////////
+// MST KRUSKAL START
+////////////////////////////////
+typedef std::set<uint> DRZEWO;
+typedef std::set<DRZEWO> LAS;
+
+Graph &Kruskal(const Graph& G, Graph &mst)//minimal spanning tree
+{
+    if(G.getNumberOfVerticles()<1)
+    {
+        MessageBoxA(0,"","graph must have positive number of verticles",0);
+        return mst;
+    }
+    mst.clearEdgesList();
+    int N=G.getNumberOfVerticles();
+    mst.setNumberOfVerticles(N);
+
+    std::vector<EDGE> edgesHeap(G.edgesHeap); //copy od edges
+
+    LAS L;
+
+    for(int i=0; i<G.getNumberOfVerticles(); i++)
+    {
+        DRZEWO w;
+        w.insert(i);
+        L.insert(w);
+    }
+
+    make_heap(edgesHeap.begin(), edgesHeap.end(), compareEdges);
+
+    do
+    {
+        if(edgesHeap.empty()) break;
+        EDGE nearest=*edgesHeap.begin();
+        DRZEWO firstTree,secondTree;
+        for(LAS::iterator it= L.begin(); it!=L.end(); it++)
+        {
+            DRZEWO d=*it;
+            if(d.find(nearest.first.first)!=d.end())
+                firstTree=*it;
+        }
+        for(LAS::iterator it= L.begin(); it!=L.end(); it++)
+        {
+            DRZEWO d=*it;
+            if(d.find(nearest.first.second)!=d.end())
+                secondTree=*it;
+        }
+        if(firstTree!=secondTree) //jesli laczy dwa rozne drzewa
+        {
+            DRZEWO &f=firstTree;
+            DRZEWO &s=secondTree;
+            f.insert(s.begin(), s.end());
+            for(LAS::iterator it=L.begin(); it!=L.end(); it++)
+                if(*it==s)
+                {
+                    L.erase(it);
+                    break;
+                }
+            mst.connectNodes(nearest.first.first, nearest.first.second, nearest.second);
+        }
+        pop_heap(edgesHeap.begin(), edgesHeap.end(), compareEdges);
+        edgesHeap.pop_back();
+    }
+    while (edgesHeap.size()!=0);
+
+    return mst;
+}
+////////////////////////////////
+// MST KRUSKAL END
+////////////////////////////////
+
 
 int main(int argc, const char *argv[])
 {
+    const char *algos[]= {"dijkstra", "bellmanford", "prime", "kruskal"};
+    const char *implementations[]= {"list", "matrix"};
     int V, maxWeight, minWeight;
     float E;
     const char *algo, *impl;
@@ -609,58 +661,58 @@ int main(int argc, const char *argv[])
     if(argc>=7) minWeight=atoi(argv[7-1]);
 
     int ALGO=0;
-    if(strcmp(algo,"dijkstra")==0) ALGO=1;
-    else if(strcmp(algo,"bellmanford")==0) ALGO=2;
-    else if(strcmp(algo,"prime")==0) ALGO=3;
-    else if(strcmp(algo,"kruskal")==0) ALGO=4;
+    if(strcmp(algo,algos[0])==0) ALGO=1;
+    else if(strcmp(algo,algos[1])==0) ALGO=2;
+    else if(strcmp(algo,algos[2])==0) ALGO=3;
+    else if(strcmp(algo,algos[3])==0) ALGO=4;
 
     if(argc>=5 || ALGO!=0)
     {
-    	Graph *G;
-    	if(strcmp(impl,"list")==0)
-			G=new GraphList(0);
-    	else //"matr"
-			G=new GraphMatrix(0);
-    	G->generateGraph(V,E,maxWeight, minWeight);
-    	int t1=GetTickCount();
-    	switch(ALGO)
-    	{
-			case 1:
-				Dij(*G, 0);
-				break;
-			case 2:
-				FB(*G, 0);
-				break;
-			case 3:
-				Graph *mst;
-				if(strcmp(impl,"list")==0)
-					mst=new GraphList(0);
-				else //"matr"
-					mst=new GraphMatrix(0);
-				Prime(*G,*mst);
-				delete mst;
-				break;
-			case 4:
-				Graph *mst;
-				if(strcmp(impl,"list")==0)
-					mst=new GraphList(0);
-				else //"matr"
-					mst=new GraphMatrix(0);
-				Kruskal(*G,*mst);
-				delete mst;
-				break;
-    	}
-    	int t2=GetTickCount();
-    	delete G;
-    	std::cout<<"took: "<<(t2-t1)<<endl;
-    	saveResult(algo, impl, V, E, t2-t1);
-    	;
+        Graph *G=NULL;
+        Graph *mst=NULL;
+        bool isList=(strcmp(impl,implementations[0])==0);
+        if(isList)
+            G=new GraphList(0);
+        else //"matr"
+            G=new GraphMatrix(0);
+        G->generateGraph(V,E,maxWeight, minWeight);
+        int t1=GetTickCount();
+        switch(ALGO)
+        {
+        case 1:
+            Dij(*G, 0);
+            break;
+        case 2:
+            FB(*G, 0);
+            break;
+        case 3:
+            if(isList)
+                mst=new GraphList(0);
+            else //"matr"
+                mst=new GraphMatrix(0);
+			std::cout<<"prime"<<endl;
+            Prime(*G,*mst);
+            delete mst;
+            break;
+        case 4:
+            if(strcmp(impl,"list")==0)
+                mst=new GraphList(0);
+            else //"matr"
+                mst=new GraphMatrix(0);
+			std::cout<<"kruskal"<<endl;
+            Kruskal(*G,*mst);
+            delete mst;
+            break;
+        }
+        int t2=GetTickCount();
+        delete G;
+        std::cout<<"took: "<<(t2-t1)<<endl;
+        saveResult(algo, impl, V, E, t2-t1);
+        ;
         //doAlgorithm("dijkstra","matrix",G);
     }
     else
     {
-        const char *algos[]= {"dijkstra", "bellmanford", "kruskal", "prime"};
-        const char *implementations[]= {"list", "matrix"};
         printf("usage: prog [%s] [%s] number_of_verticles:int number_of_edges:int [maxWeight:int [minWeight:int]]"
                , strjoin(algos, 4, "|").c_str()
                , strjoin(implementations, 2, "|").c_str());
