@@ -520,14 +520,84 @@ vector<uint> FB(Graph& G, int from)//minimal spanning tree
 ////////////////////////////////
 
 
+////////////////////////////////
+// MST PRIME START
+////////////////////////////////
+bool compareEdgesPrime(const EDGE& e1, const EDGE& e2)
+{
+	return e1.second>e2.second;
+}
+
+struct AddAllNeighboursToLocalEdgesHeap: public unary_f
+{
+    std::vector<EDGE> &edgesHeap;
+    std::vector<int> &MDR;
+    AddAllNeighboursToLocalEdgesHeap(std::vector<int> &MDR, std::vector<EDGE> &edgesHeap):MDR(MDR),edgesHeap(edgesHeap) {}
+    bool operator()(const EDGE &p)
+    {
+			if(MDR[p.first.first])
+				return false; //zabezpieczenie przed cyklicznoscia
+			edgesHeap.push_back(p);
+			push_heap(edgesHeap.begin(), edgesHeap.end(), compareEdgesPrime);
+			return true;
+    }
+};
+
+Graph &Prime(const Graph& G, Graph &mst)//minimal spanning tree
+{
+	mst.clearEdgesList();
+	if(G.getEdgesNumber()<1)
+	{
+		MessageBoxA(0,"","graph must have positive number of verticles",0);
+		return mst;
+	}
+	mst.setNumberOfVerticles(G.getNumberOfVerticles());
+	std::vector<int> MDR; //wierzcholki juz dodane
+	std::vector<EDGE> edgesHeap;
+	MDR.resize(G.getNumberOfVerticles());
+	AddAllNeighboursToLocalEdgesHeap addAllNeighboursToLocalEdgesHeap(MDR,edgesHeap);
+	bool doit=false;
+	int i=0;
+	do
+	{
+		doit=false;
+		//krawedzie wychodzace z i-tego wierzcholka wrzucamy do Q (zbiornika krawedzi)
+		//dodawanie krawedzi nowego wierzcholka do kopca krawedzi
+		G.iterateThroughNeighbours(i,addAllNeighboursToLocalEdgesHeap);
+		MDR[i]=true;	//wybieramy poczatkowy wierzcholek
+
+		EDGE nearest;
+		again:
+		doit=true;
+		if(edgesHeap.empty()) break;
+		nearest=*edgesHeap.begin();
+		//std::cout<<((std::string)mst);
+		pop_heap(edgesHeap.begin(), edgesHeap.end(), compareEdges);
+		edgesHeap.pop_back();
+		if(MDR[nearest.first.second] && MDR[nearest.first.first])
+			goto again;
+		else
+			mst.connectNodes(nearest.first.first,nearest.first.second,nearest.second);
+
+		i=nearest.first.second;
+	}
+	while (edgesHeap.size()!=0 || doit);
+
+	return mst;
+}
+////////////////////////////////
+// MST PRIME END
+////////////////////////////////
+
+
 int main(int argc, const char *argv[])
 {
     int V, maxWeight, minWeight;
     float E;
     const char *algo, *impl;
-    algo="bellmanford";
+    algo="prime";
     impl="list";
-    V=400;
+    V=1000;
     E=.8; //wspolczyniik wypelnienia grafu pelnego
     maxWeight=100;
     minWeight=1;
@@ -544,7 +614,7 @@ int main(int argc, const char *argv[])
     else if(strcmp(algo,"prime")==0) ALGO=3;
     else if(strcmp(algo,"kruskal")==0) ALGO=4;
 
-    if(argc>=5 && ALGO!=0)
+    if(argc>=5 || ALGO!=0)
     {
     	Graph *G;
     	if(strcmp(impl,"list")==0)
@@ -561,8 +631,27 @@ int main(int argc, const char *argv[])
 			case 2:
 				FB(*G, 0);
 				break;
+			case 3:
+				Graph *mst;
+				if(strcmp(impl,"list")==0)
+					mst=new GraphList(0);
+				else //"matr"
+					mst=new GraphMatrix(0);
+				Prime(*G,*mst);
+				delete mst;
+				break;
+			case 4:
+				Graph *mst;
+				if(strcmp(impl,"list")==0)
+					mst=new GraphList(0);
+				else //"matr"
+					mst=new GraphMatrix(0);
+				Kruskal(*G,*mst);
+				delete mst;
+				break;
     	}
     	int t2=GetTickCount();
+    	delete G;
     	std::cout<<"took: "<<(t2-t1)<<endl;
     	saveResult(algo, impl, V, E, t2-t1);
     	;
