@@ -52,68 +52,9 @@ namespace std
 	}
 }
 
-bool odd;
-
-struct BelowFilter
-{
-    int lim;
-    BelowFilter(int lim):lim(lim) {}
-    bool operator()(int n)
-    {
-        return n<=lim;
-    }
-};
-struct EqualFilter
-{
-    int lim;
-    EqualFilter(int lim):lim(lim) {}
-    bool operator()(int n)
-    {
-        return n==lim;
-    }
-};
-
 struct unary_f
 {
 	virtual bool operator()(const EDGE&) =0;
-};
-
-struct CompareVerticles
-{
-    std::vector<int> &d;
-    CompareVerticles(std::vector<int> &d):d(d)
-    {
-    }
-    bool operator()(int a, int b) const
-    {
-        return d[a]<d[b];
-    }
-};
-
-
-
-struct AddNeighbours: public unary_f
-{
-    vector<int> &Q;
-    vector<int> &d;
-    vector<int> &p;
-    CompareVerticles compareVerticles;
-    AddNeighbours(vector<int> &Q, vector<int> &d, CompareVerticles compare, vector<int> &p):compareVerticles(compare),Q(Q),d(d),p(p) {};
-    //relaksacja wierzcholka jesli mozna
-    bool operator()(const EDGE &a)
-    {
-        int fromVert=a.first.first;
-        int toVert=a.first.second;
-        int newPathLength=d[fromVert]+a.second;
-        if(d[toVert]>newPathLength)
-        {
-            d[toVert]=newPathLength;
-            Q.push_back(toVert);
-#ifdef HEAP
-            push_heap(Q.begin(), Q.end(), compareVerticles);
-#endif
-        }
-    }
 };
 
 class Graph
@@ -373,7 +314,6 @@ namespace std
 {
 ostream& operator<<(ostream& cout, const list<EDGE>& es)
 {
-    ::odd=!::odd;
     std::copy(es.begin(), es.end(), std::ostream_iterator< EDGE >(cout, "\n"));
     return cout;
 }
@@ -398,6 +338,47 @@ ostream &operator<<(ostream &cout, const vector<int> &c)
     return cout;
 }
 
+
+////////////////////////////////
+//   DIJKSTRA START
+////////////////////////////////
+
+
+struct CompareVerticles
+{
+    std::vector<int> &d;
+    CompareVerticles(std::vector<int> &d):d(d)
+    {
+    }
+    bool operator()(int a, int b) const
+    {
+        return d[a]<d[b];
+    }
+};
+
+struct AddNeighbours: public unary_f
+{
+    vector<int> &Q;
+    vector<int> &d;
+    vector<int> &p;
+    CompareVerticles compareVerticles;
+    AddNeighbours(vector<int> &Q, vector<int> &d, CompareVerticles compare, vector<int> &p):compareVerticles(compare),Q(Q),d(d),p(p) {};
+    //relaksacja wierzcholka jesli mozna
+    bool operator()(const EDGE &a)
+    {
+        int fromVert=a.first.first;
+        int toVert=a.first.second;
+        int newPathLength=d[fromVert]+a.second;
+        if(d[toVert]>newPathLength)
+        {
+            d[toVert]=newPathLength;
+            Q.push_back(toVert);
+#ifdef HEAP
+            push_heap(Q.begin(), Q.end(), compareVerticles);
+#endif
+        }
+    }
+};
 
 
 //#define HEAP
@@ -443,6 +424,11 @@ vector<int> Dij(const Graph& G, int from)//minimal spanning tree
     return d;
 }
 
+////////////////////////////////
+//   DIJKSTRA END
+////////////////////////////////
+
+
 
 string strjoin(const char *algos[], int tablen, const char *separator)
 {
@@ -452,8 +438,6 @@ string strjoin(const char *algos[], int tablen, const char *separator)
     algs_str=algs_str.substr(0, algs_str.length()-strlen(separator));
     return algs_str;
 }
-
-
 
 void saveResult(const char *algo_choice, const char *impl_choice, int V, double E, int ticks)
 {
@@ -485,12 +469,63 @@ void doAlgorithm(const char *algo, const char *impl, const Graph &G)
     }
 }
 
+
+////////////////////////////////
+// BELLMAN FORD START
+////////////////////////////////
+#define INFTY 9999999
+struct Relaxation: public unary_f
+{
+    std::vector<uint> &d;
+    Relaxation(std::vector<uint> &d):d(d) {}
+    bool operator()(const EDGE &e)
+    {
+        int from=e.first.first;
+        int to=e.first.second;
+        int cost=e.second;
+        if(d[from]<INFTY && d[to]>d[from]+cost) //relaxation is needed //DANGER: vulnerable to cycles.
+        {
+            d[to]=d[from]+cost;
+            //p[to]=from;
+        }
+        return true;
+    }
+};
+vector<uint> FB(Graph& G, int from)//minimal spanning tree
+{
+
+    //http://www.ibiblio.org/links/applets/appindex/graphtheory.html
+    if(G.getNumberOfVerticles()<1)
+    {
+        MessageBoxA(0,"","graph must have positive number of verticles",0);
+        return vector<uint>(0);
+    }
+    int N=G.getNumberOfVerticles();
+    std::vector<uint> d(N, INFTY); //distance to infty (at least in 64-bit world ;) )
+
+    Relaxation relaxIfNeeded(d);
+    d[from]=0;
+
+	int cnt=0;
+    for(int u=0; u<N; u++) //for each verticle
+    {
+		for(int i=0; i<N; i++) //for each verticle
+        //if(1)	std::for_each(G.polaczenia[i].begin(), G.polaczenia[i].end(), relaxIfNeeded);
+        G.iterateThroughNeighbours(i, relaxIfNeeded);
+    }
+    return d;
+}
+////////////////////////////////
+// BELLMAN FORD END
+////////////////////////////////
+
+
 int main(int argc, const char *argv[])
 {
     int V, maxWeight, minWeight;
     float E;
     const char *algo, *impl;
-    algo="dijkstra";
+    algo="bellmanford";
     impl="list";
     V=400;
     E=.8; //wspolczyniik wypelnienia grafu pelnego
@@ -503,59 +538,35 @@ int main(int argc, const char *argv[])
     if(argc>=6) maxWeight=atoi(argv[6-1]);
     if(argc>=7) minWeight=atoi(argv[7-1]);
 
-    if(1)
+    int ALGO=0;
+    if(strcmp(algo,"dijkstra")==0) ALGO=1;
+    else if(strcmp(algo,"bellmanford")==0) ALGO=2;
+    else if(strcmp(algo,"prime")==0) ALGO=3;
+    else if(strcmp(algo,"kruskal")==0) ALGO=4;
+
+    if(argc>=5 && ALGO!=0)
     {
     	Graph *G;
     	if(strcmp(impl,"list")==0)
 			G=new GraphList(0);
-    	else
+    	else //"matr"
 			G=new GraphMatrix(0);
     	G->generateGraph(V,E,maxWeight, minWeight);
     	int t1=GetTickCount();
-    	if(strcmp(algo,"dijkstra")==0) Dij(*G, 0);
+    	switch(ALGO)
+    	{
+			case 1:
+				Dij(*G, 0);
+				break;
+			case 2:
+				FB(*G, 0);
+				break;
+    	}
     	int t2=GetTickCount();
     	std::cout<<"took: "<<(t2-t1)<<endl;
     	saveResult(algo, impl, V, E, t2-t1);
     	;
         //doAlgorithm("dijkstra","matrix",G);
-    }
-    else if(argc==2 && strcmp(argv[1],"repeat"))
-    {
-		GraphList G(0);
-        G.loadGraphFromFile("c:\\lastgraph.txt");
-        //int E=G.getEdgesNumber();
-        //int V=G.polaczenia.size();
-        //cout<<Dij(G,0);
-        doAlgorithm("dijkstra","list",G);
-    }
-    else if(strcmp("dijkstra",algo)==0 && strcmp("list",impl)==0)
-    {
-        printf("interpreted arguments as %d %f %d %d\n", V, E, maxWeight, minWeight);
-
-		GraphList G(0);
-        G.generateGraph(V,E);
-        printf("> graph size=%d,%d,eheap=%d\n",G.getNumberOfVerticles(),G.getEdgesNumber(), G.edgesHeap.size());
-        doAlgorithm("dijkstra","list",G);
-        //saveGraph(G);
-        return 0;
-    }
-    else if(strcmp("dijkstra",algo)==0 && strcmp("matrix",impl)==0)
-    {
-        printf("interpreted arguments as %d %f %d %d\n", V, E, maxWeight, minWeight);
-
-		GraphMatrix G(0);
-        G.generateGraph(V,E);
-        printf("> graph size=%d,%d,eheap=%d\n",G.getNumberOfVerticles(),G.getEdgesNumber(), G.edgesHeap.size());
-        doAlgorithm("dijkstra","matrix",G);
-        //saveGraph(G);
-        return 0;
-    }
-
-    else if(argc==2)
-    {
-		GraphList G(0);
-        G.loadGraphFromFile(argv[1]);
-        doAlgorithm("dijkstra","list",G);
     }
     else
     {
